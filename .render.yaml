@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: apple-pay-server
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
