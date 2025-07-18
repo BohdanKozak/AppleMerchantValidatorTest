@@ -2,6 +2,9 @@ services:
   - type: web
     name: apple-pay-server
     env: node
-    plan: free
     buildCommand: npm install
-    startCommand: npm start
+    startCommand: node index.js
+    runtime: node
+    plan: free
+    region: oregon
+    nodeVersion: 18
