@@ -7,6 +7,23 @@ const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fet
 const app = express();
 app.use(express.json());
 
+app.use((req, res, next) => {
+  const start = Date.now();
+
+  const originalSend = res.send;
+
+  res.send = function (body) {
+    const duration = Date.now() - start;
+    console.log(` ${req.method} ${req.originalUrl}`);
+    console.log(` Status: ${res.statusCode} (${duration}ms)`);
+    console.log(` Response Body:`, typeof body === 'string' ? body : JSON.stringify(body, null, 2));
+    return originalSend.call(this, body);
+  };
+
+  next();
+});
+
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const P12_PATH = path.join(__dirname, 'merchant_cert.p12');
