@@ -61,7 +61,7 @@
       };
 
       session.onpaymentauthorized = (event) => {
-        alert('Payment authorized: ' + JSON.stringify(event.payment));
+        console.log('Payment authorized: ' + JSON.stringify(event.payment));
         session.completePayment(ApplePaySession.STATUS_SUCCESS);
       };
 
