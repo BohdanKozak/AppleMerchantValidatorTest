@@ -39,7 +39,7 @@
         }
       };
 
-      const session = new ApplePaySession(3, paymentRequest);
+      const session = new ApplePaySession(5, paymentRequest);
 
       session.onvalidatemerchant = async (event) => {
         alert('Validating merchant: ' + event.validationURL);
