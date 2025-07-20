@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Apple Pay Button</title>
+  <style>
+    #apple-pay-button {
+      width: 220px;
+      height: 44px;
+      margin-top: 50px;
+      cursor: pointer;
+      display: inline-block;
+      -webkit-appearance: -apple-pay-button;
+      -apple-pay-button-type: plain;
+      -apple-pay-button-style: black;
+    }
+  </style>
+</head>
+<body>
+
+<div id="apple-pay-button" role="button" lang="en"></div>
+
+<script>
+  if (window.ApplePaySession && ApplePaySession.canMakePayments()) {
+    const button = document.getElementById('apple-pay-button');
+
+    function startApplePaySession() {
+      alert('Apple Pay button clicked');
+
+      const paymentRequest = {
+        countryCode: 'US',
+        currencyCode: 'USD',
+        merchantCapabilities: ['supports3DS'],
+        supportedNetworks: ['visa', 'masterCard', 'amex'],
+        total: {
+          label: 'Your Merchant Name',
+          amount: '9.99',
+          type: 'final'
+        }
+      };
+
+      const session = new ApplePaySession(3, paymentRequest);
+
+      session.onvalidatemerchant = async (event) => {
+        alert('Validating merchant: ' + event.validationURL);
+        try {
+          const response = await fetch('https://applemerchantvalidatortest.onrender.com/validate-merchant', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ validationUrl: event.validationURL }),
+          });
+
+          alert('Merchant validation response status: ' + response.status);
+
+          if (!response.ok) throw new Error('Merchant validation failed');
+
+          const merchantSession = await response.json();
+          alert('Merchant validation succeeded');
+          session.completeMerchantValidation(merchantSession);
+        } catch (err) {
+          alert('Merchant validation failed: ' + err.message);
+          session.abort();
+        }
+      };
+
+      session.onpaymentauthorized = (event) => {
+        alert('Payment authorized: ' + JSON.stringify(event.payment));
+        session.completePayment(ApplePaySession.STATUS_SUCCESS);
+      };
+
+      session.begin();
+      alert('Apple Pay session started');
+    }
+
+    button.addEventListener('click', startApplePaySession);
+    button.addEventListener('touchstart', startApplePaySession);
+
+  } else {
+    const button = document.getElementById('apple-pay-button');
+    if (button) {
+      button.style.display = 'none';
+    }
+    alert('Apple Pay is not supported or not available.');
+  }
+</script>
+
+</body>
+</html>
