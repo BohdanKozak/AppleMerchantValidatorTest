@@ -60,8 +60,13 @@
         }
       };
 
-      session.onpaymentauthorized = (event) => {
-        console.log('Payment authorized: ' + JSON.stringify(event.payment));
+      session.onpaymentauthorized = async (event) => {
+        const authorizedResponse = await fetch('https://applemerchantvalidatortest.onrender.com/authorize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: JSON.stringify(event.payment.token) }),
+          });
+
         session.completePayment(ApplePaySession.STATUS_SUCCESS);
       };
 

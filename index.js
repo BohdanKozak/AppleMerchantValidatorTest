@@ -38,7 +38,7 @@ function writeCertFromEnv() {
   }
   const buffer = Buffer.from(base64, 'base64');
   fs.writeFileSync(P12_PATH, buffer);
-  console.log('✅ .p12 certificate written to disk');
+  console.log('.p12 certificate written to disk');
 }
 
 writeCertFromEnv();
@@ -71,12 +71,25 @@ app.post('/validate-merchant', async (req, res) => {
     const sessionJSON = await sessionResponse.json();
     return res.status(200).json(sessionJSON);
   } catch (err) {
-    console.error('❌ Error validating merchant:', err);
+    console.error('Error validating merchant:', err);
     return res.status(500).json({ error: 'Merchant validation failed' });
   }
 });
 
+app.post('/authorize', (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ error: 'Missing token' });
+  }
+
+  console.log('🪪 Received Apple Pay token:');
+  console.dir(token, { depth: null });
+
+  return res.status(200).json({ message: 'Token received and logged' });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
+  console.log(`Server running at http://localhost:${PORT}`);
 });
