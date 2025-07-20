@@ -55,6 +55,10 @@
           if (!response.ok) throw new Error('Merchant validation failed');
 
           const merchantSession = await response.json();
+          alert(location.hostname);
+          alert(merchantSession.domainName);
+          alert(location.hostname === merchantSession.domainName)
+          alert(typeof merchantSession);
           alert('Merchant validation succeeded');
           session.completeMerchantValidation(merchantSession);
         } catch (err) {
