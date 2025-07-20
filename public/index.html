@@ -24,9 +24,7 @@
   if (window.ApplePaySession && ApplePaySession.canMakePayments()) {
     const button = document.getElementById('apple-pay-button');
 
-    function startApplePaySession() {
-      alert('Apple Pay button clicked');
-
+    button.addEventListener('click', () => {
       const paymentRequest = {
         countryCode: 'US',
         currencyCode: 'USD',
@@ -39,10 +37,9 @@
         }
       };
 
-      const session = new ApplePaySession(5, paymentRequest);
+      const session = new ApplePaySession(4, paymentRequest);
 
       session.onvalidatemerchant = async (event) => {
-        alert('Validating merchant: ' + event.validationURL);
         try {
           const response = await fetch('https://applemerchantvalidatortest.onrender.com/validate-merchant', {
             method: 'POST',
@@ -50,16 +47,10 @@
             body: JSON.stringify({ validationUrl: event.validationURL }),
           });
 
-          alert('Merchant validation response status: ' + response.status);
-
           if (!response.ok) throw new Error('Merchant validation failed');
 
           const merchantSession = await response.json();
-          alert(location.hostname);
-          alert(merchantSession.domainName);
-          alert(location.hostname === merchantSession.domainName)
-          alert(typeof merchantSession);
-          alert('Merchant validation succeeded');
+
           session.completeMerchantValidation(merchantSession);
         } catch (err) {
           alert('Merchant validation failed: ' + err.message);
@@ -74,9 +65,7 @@
 
       session.begin();
       alert('Apple Pay session started');
-    }
-
-    button.addEventListener('click', startApplePaySession);
+    });
 
   } else {
     const button = document.getElementById('apple-pay-button');
