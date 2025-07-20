@@ -25,6 +25,8 @@
     const button = document.getElementById('apple-pay-button');
 
     button.addEventListener('click', () => {
+      button.disabled = true;
+      
       const paymentRequest = {
         countryCode: 'US',
         currencyCode: 'USD',
@@ -64,7 +66,6 @@
       };
 
       session.begin();
-      alert('Apple Pay session started');
     });
 
   } else {
