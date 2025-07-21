@@ -76,6 +76,8 @@ app.post('/validate-merchant', async (req, res) => {
   }
 });
 
+app.use(express.json());
+
 app.post('/authorize', (req, res) => {
   const { token } = req.body;
 
