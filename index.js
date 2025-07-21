@@ -111,7 +111,8 @@ app.post('/authorize', (req, res) => {
   
   console.log('JSON:', jsonString);
   console.log('Base64:', base64Encoded);
-  console.log('PaymentData Base64:', Buffer.from(paymentData).toString('base64'));
+  console.log('PaymentData Base64:', Buffer.from(JSON.stringify(paymentData)).toString('base64'));
+
 
   return res.status(200).json({ message: 'Token processed and logged' });
 });
