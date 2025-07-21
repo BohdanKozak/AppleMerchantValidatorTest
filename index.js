@@ -85,6 +85,9 @@ app.post('/authorize', (req, res) => {
     return res.status(400).json({ error: 'Missing token' });
   }
 
+  console.log('Received Apple Pay token:');
+  console.dir(token, { depth: null });
+
   const paymentData = token.paymentData;
 
   if (!paymentData) {
@@ -105,9 +108,10 @@ app.post('/authorize', (req, res) => {
   const jsonString = JSON.stringify(jsonToEncode);
 
   const base64Encoded = Buffer.from(jsonString).toString('base64');
-
-  console.log('JSON для кодування:', jsonString);
+  
+  console.log('JSON:', jsonString);
   console.log('Base64:', base64Encoded);
+  console.log('PaymentData Base64:', Buffer.from(paymentData).toString('base64'));
 
   return res.status(200).json({ message: 'Token processed and logged' });
 });
