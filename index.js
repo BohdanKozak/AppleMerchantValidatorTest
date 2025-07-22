@@ -88,33 +88,19 @@ app.post('/authorize', (req, res) => {
   console.log('Received Apple Pay token:');
   console.dir(token, { depth: null });
 
+
   const paymentData = token.paymentData;
 
   if (!paymentData) {
     return res.status(400).json({ error: 'Missing paymentData' });
   }
 
-  const jsonToEncode = {
-    version: paymentData.version,
-    data: paymentData.data,
-    signature: paymentData.signature,
-    header: {
-      ephemeralPublicKey: paymentData.header.ephemeralPublicKey,
-      publicKeyHash: paymentData.header.publicKeyHash,
-      transactionId: paymentData.header.transactionId
-    }
-  };
-
-  const jsonString = JSON.stringify(jsonToEncode);
-
+  const jsonString = JSON.stringify(paymentData);
   const base64Encoded = Buffer.from(jsonString).toString('base64');
-  
-  console.log('JSON:', jsonString);
-  console.log('Base64:', base64Encoded);
-  console.log('PaymentData Base64:', Buffer.from(JSON.stringify(paymentData)).toString('base64'));
 
+  console.log('Base64 Payload to Send:', base64Encoded);
 
-  return res.status(200).json({ message: 'Token processed and logged' });
+  return res.status(200).json({ message: 'Token processed and logged', payload: base64Encoded });
 });
 
 
