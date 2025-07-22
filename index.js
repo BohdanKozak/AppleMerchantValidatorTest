@@ -33,7 +33,7 @@ const P12_PATH = path.join(__dirname, 'merchant_cert.p12');
 function writeCertFromEnv() {
   const base64 = process.env.APPLE_MERCHANT_CERT_P12_BASE64;
   if (!base64) {
-    console.error('❌ APPLE_MERCHANT_CERT_P12_BASE64 is not set');
+    console.error('APPLE_MERCHANT_CERT_P12_BASE64 is not set');
     process.exit(1);
   }
   const buffer = Buffer.from(base64, 'base64');
@@ -54,10 +54,10 @@ app.post('/validate-merchant', async (req, res) => {
     const sessionResponse = await fetch(validationUrl, {
       method: 'POST',
       body: JSON.stringify({
-        merchantIdentifier: 'merchant.com.applemerchantvalidatortest',
+        merchantIdentifier: 'merchant.com.applemerchantvalidatorteste',
         displayName: 'My Test Store',
         initiative: 'web',
-        initiativeContext: 'applemerchantvalidatortest.onrender.com',
+        initiativeContext: 'eapplemerchantvalidatortest.onrender.com',
       }),
       agent: new https.Agent({
         pfx: fs.readFileSync(P12_PATH),
@@ -69,6 +69,8 @@ app.post('/validate-merchant', async (req, res) => {
     });
 
     const sessionJSON = await sessionResponse.json();
+    console.log(sessionJSON);
+  
     return res.status(200).json(sessionJSON);
   } catch (err) {
     console.error('Error validating merchant:', err);
