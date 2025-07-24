@@ -54,10 +54,10 @@ app.post('/validate-merchant', async (req, res) => {
     const sessionResponse = await fetch(validationUrl, {
       method: 'POST',
       body: JSON.stringify({
-        merchantIdentifier: 'merchant.com.applemerchantvalidatorteste',
+        merchantIdentifier: 'merchant.com.applemerchantvalidatortest',
         displayName: 'My Test Store',
         initiative: 'web',
-        initiativeContext: 'eapplemerchantvalidatortest.onrender.com',
+        initiativeContext: 'applemerchantvalidatortest.onrender.com',
       }),
       agent: new https.Agent({
         pfx: fs.readFileSync(P12_PATH),
@@ -69,8 +69,6 @@ app.post('/validate-merchant', async (req, res) => {
     });
 
     const sessionJSON = await sessionResponse.json();
-    console.log(sessionJSON);
-  
     return res.status(200).json(sessionJSON);
   } catch (err) {
     console.error('Error validating merchant:', err);
