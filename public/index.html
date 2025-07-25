@@ -43,9 +43,10 @@
         merchantCapabilities: ['supports3DS'],
         supportedNetworks: ['visa', 'masterCard', 'amex'],
         total: {
-          label: 'Your Merchant Name',
+          label: 'MoneyMatrix',
           amount: '9.99',
           type: 'final'
+
         }
       };
 
@@ -53,7 +54,7 @@
 
       session.onvalidatemerchant = async (event) => {
         try {
-          const response = await fetch('https://applemerchantvalidatortest.onrender.com/validate-merchant', {
+          const response = await fetch('https://applebuttontest.onrender.com/validate-merchant', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ validationUrl: event.validationURL }),
@@ -71,7 +72,7 @@
       };
 
       session.onpaymentauthorized = async (event) => {
-        const authorizedResponse = await fetch('https://applemerchantvalidatortest.onrender.com/authorize', {
+        const authorizedResponse = await fetch('https://applebuttontest.onrender.com/authorize', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token: event.payment.token }),
