@@ -82,33 +82,29 @@ app.post('/validate-merchant', async (req, res) => {
 
 app.use(express.json());
 
-function getPrivateKeyBuffer() {
-  const privateKeyPem = process.env.APPLE_PAYMENT_PROCESSING_KEY;
-  if (!privateKeyPem) throw new Error('APPLE_PAYMENT_PROCESSING_KEY is not set');
-
-  return getPrivateKeyBufferFromPem(privateKeyPem);
-}
-
 function getPrivateKeyBufferFromPkcs8Pem() {
   const privateKeyPem = process.env.APPLE_PAYMENT_PROCESSING_KEY;
   if (!privateKeyPem) throw new Error('APPLE_PAYMENT_PROCESSING_KEY is not set');
 
-  // Створюємо KeyObject із PKCS#8 PEM
-  const keyObject = crypto.createPrivateKey({
-    key: privateKeyPem,
-    format: 'pem',
-    type: 'pkcs8',
-  });
+  // Розбираємо PKCS#8 PEM
+  const privateKeyObj = forge.pki.privateKeyFromPem(privateKeyPem);
 
-  // Експортуємо приватний ключ у DER SEC1 формат (чистий EC ключ)
-  // Саме цей формат очікує crypto.ECDH.setPrivateKey
-  const privateKeySec1Der = keyObject.export({
-    format: 'der',
-    type: 'sec1',
-  });
+  // Витягуємо приватне число d (BigInteger)
+  const d = privateKeyObj.d;
 
-  return privateKeySec1Der;
+  // Конвертуємо d в hex і підганяємо довжину до 64 символів (32 байти)
+  let privHex = d.toString(16);
+  if (privHex.length < 64) {
+    privHex = privHex.padStart(64, '0');
+  }
+
+  // Конвертуємо в Buffer
+  const privBuffer = Buffer.from(privHex, 'hex');
+
+  return privBuffer;
 }
+
+
 
 // HKDF на sha256
 function hkdf(secret, salt, info, length) {
