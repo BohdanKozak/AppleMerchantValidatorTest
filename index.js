@@ -6,6 +6,7 @@ const cors = require('cors');
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 const bodyParser = require('body-parser');
 const forge = require('node-forge');
+const crypto = require('crypto');
 
 const app = express();
 app.use(cors());
@@ -94,28 +95,13 @@ writeProcessingCertFromEnv();
 
 function getPrivateKeyFromP12() {
   const p12Buffer = fs.readFileSync(P12_PATH2);
-  const p12Asn1 = forge.asn1.fromDer(p12Buffer.toString('binary'));
-  const p12 = forge.pkcs12.pkcs12FromAsn1(
-    p12Asn1,
-    process.env.APPLE_PAYMENT_PROCESSING_CERT_PASSWORD
-  );
-
-  let privateKeyPem = null;
-
-  p12.safeContents.forEach(safeContent => {
-    safeContent.safeBags.forEach(safeBag => {
-      if (safeBag.type === forge.pki.oids.pkcs8ShroudedKeyBag ||
-          safeBag.type === forge.pki.oids.keyBag) {
-        privateKeyPem = forge.pki.privateKeyToPem(safeBag.key);
-      }
-    });
+  const keyObject = crypto.createPrivateKey({
+    key: p12Buffer,
+    format: 'p12',
+    passphrase: process.env.APPLE_PAYMENT_PROCESSING_CERT_PASSWORD
   });
 
-  if (!privateKeyPem) {
-    throw new Error('Private key not found in payment processing certificate');
-  }
-
-  return privateKeyPem;
+  return keyObject.export({ format: 'pem', type: 'pkcs8' });
 }
 
 
