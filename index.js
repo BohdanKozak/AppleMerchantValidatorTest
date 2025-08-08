@@ -104,16 +104,20 @@ function getPrivateKeyFromP12() {
 
   p12.safeContents.forEach(safeContent => {
     safeContent.safeBags.forEach(safeBag => {
-      if (safeBag.type === forge.pki.oids.pkcs8ShroudedKeyBag) {
+      if (safeBag.type === forge.pki.oids.pkcs8ShroudedKeyBag ||
+          safeBag.type === forge.pki.oids.keyBag) {
         privateKeyPem = forge.pki.privateKeyToPem(safeBag.key);
       }
     });
   });
 
-  if (!privateKeyPem) throw new Error('Private key not found in payment processing certificate');
+  if (!privateKeyPem) {
+    throw new Error('Private key not found in payment processing certificate');
+  }
 
   return privateKeyPem;
 }
+
 
 function hkdf(secret, salt, info, length) {
   return crypto.hkdfSync('sha256', secret, salt, info, length);
