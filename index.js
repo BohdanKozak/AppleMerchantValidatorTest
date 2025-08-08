@@ -4,10 +4,13 @@ const path = require('path');
 const https = require('https');
 const cors = require('cors');
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+const bodyParser = require('body-parser');
+const forge = require('node-forge');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(bodyParser.json());
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -78,31 +81,92 @@ app.post('/validate-merchant', async (req, res) => {
 
 app.use(express.json());
 
+const P12_PATH2 = path.join(__dirname, 'payment_processing.p12');
+
+function writeProcessingCertFromEnv() {
+  const base64 = process.env.APPLE_PAYMENT_PROCESSING_CERT_P12_BASE64;
+  if (!base64) throw new Error('APPLE_PAYMENT_PROCESSING_CERT_P12_BASE64 is not set');
+  fs.writeFileSync(P12_PATH2, Buffer.from(base64, 'base64'));
+  console.log('Payment processing .p12 certificate written to disk');
+}
+
+writeProcessingCertFromEnv();
+
+function getPrivateKeyFromP12() {
+  const p12Buffer = fs.readFileSync(P12_PATH2);
+  const p12Asn1 = forge.asn1.fromDer(p12Buffer.toString('binary'));
+  const p12 = forge.pkcs12.pkcs12FromAsn1(
+    p12Asn1,
+    process.env.APPLE_PAYMENT_PROCESSING_CERT_PASSWORD
+  );
+
+  let privateKeyPem = null;
+
+  p12.safeContents.forEach(safeContent => {
+    safeContent.safeBags.forEach(safeBag => {
+      if (safeBag.type === forge.pki.oids.pkcs8ShroudedKeyBag) {
+        privateKeyPem = forge.pki.privateKeyToPem(safeBag.key);
+      }
+    });
+  });
+
+  if (!privateKeyPem) throw new Error('Private key not found in payment processing certificate');
+
+  return privateKeyPem;
+}
+
+function hkdf(secret, salt, info, length) {
+  return crypto.hkdfSync('sha256', secret, salt, info, length);
+}
+
+function decryptApplePayToken(paymentData) {
+  const privateKeyPem = getPrivateKeyFromP12();
+
+  const ephemeralPublicKeyBytes = Buffer.from(paymentData.header.ephemeralPublicKey, 'base64');
+
+  const ecdh = crypto.createECDH('prime256v1');
+  ecdh.setPrivateKey(
+    crypto.createPrivateKey({
+      key: privateKeyPem,
+      format: 'pem'
+    }).export({ format: 'der', type: 'pkcs8' }).slice(-32)
+  );
+
+  const sharedSecret = ecdh.computeSecret(ephemeralPublicKeyBytes);
+
+  const symmetricKey = hkdf(
+    sharedSecret,
+    Buffer.from(paymentData.header.publicKeyHash, 'base64'),
+    Buffer.from('Apple', 'utf8'),
+    32
+  );
+
+  const dataBuffer = Buffer.from(paymentData.data, 'base64');
+  const iv = dataBuffer.slice(0, 16); // Apple Pay IV
+  const cipherText = dataBuffer.slice(16, dataBuffer.length - 16);
+  const authTag = dataBuffer.slice(dataBuffer.length - 16);
+
+  const decipher = crypto.createDecipheriv('aes-256-gcm', symmetricKey, iv);
+  decipher.setAuthTag(authTag);
+  const decrypted = Buffer.concat([decipher.update(cipherText), decipher.final()]);
+
+  return JSON.parse(decrypted.toString('utf8'));
+}
+
 app.post('/authorize', (req, res) => {
-  const { token } = req.body;
+  try {
+    const { paymentData } = req.body;
+    if (!paymentData) return res.status(400).json({ error: 'Missing paymentData' });
 
-  if (!token) {
-    return res.status(400).json({ error: 'Missing token' });
+    const decrypted = decryptApplePayToken(paymentData);
+    console.log('Decrypted Apple Pay data:', decrypted);
+
+    res.json({ message: 'Token decrypted', decrypted });
+  } catch (err) {
+    console.error('Error decrypting token:', err);
+    res.status(500).json({ error: err.message });
   }
-
-  console.log('Received Apple Pay token:');
-  console.dir(token, { depth: null });
-
-
-  const paymentData = token.paymentData;
-
-  if (!paymentData) {
-    return res.status(400).json({ error: 'Missing paymentData' });
-  }
-
-  const jsonString = JSON.stringify(paymentData);
-  const base64Encoded = Buffer.from(jsonString).toString('base64');
-
-  console.log('Base64 Payload to Send:', base64Encoded);
-
-  return res.status(200).json({ message: 'Token processed and logged', payload: base64Encoded });
 });
-
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
