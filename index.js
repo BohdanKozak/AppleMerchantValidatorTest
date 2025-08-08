@@ -89,8 +89,6 @@ function getPrivateKeyBuffer() {
   return getPrivateKeyBufferFromPem(privateKeyPem);
 }
 
-const crypto = require('crypto');
-
 function getPrivateKeyBufferFromPkcs8Pem() {
   const privateKeyPem = process.env.APPLE_PAYMENT_PROCESSING_KEY;
   if (!privateKeyPem) throw new Error('APPLE_PAYMENT_PROCESSING_KEY is not set');
