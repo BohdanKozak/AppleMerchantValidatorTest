@@ -89,16 +89,27 @@ function getPrivateKeyBuffer() {
   return getPrivateKeyBufferFromPem(privateKeyPem);
 }
 
-function getPrivateKeyBufferFromPem(pem) {
-  const forge = require('node-forge');
-  const privateKeyForge = forge.pki.privateKeyFromPem(pem);
-  const privateKeyBigInt = privateKeyForge.d;
-  let privHex = privateKeyBigInt.toString(16);
-  if (privHex.length < 64) {
-    privHex = privHex.padStart(64, '0');
-  }
-  const privBuffer = Buffer.from(privHex, 'hex');
-  return privBuffer;
+const crypto = require('crypto');
+
+function getPrivateKeyBufferFromPkcs8Pem() {
+  const privateKeyPem = process.env.APPLE_PAYMENT_PROCESSING_KEY;
+  if (!privateKeyPem) throw new Error('APPLE_PAYMENT_PROCESSING_KEY is not set');
+
+  // Створюємо KeyObject із PKCS#8 PEM
+  const keyObject = crypto.createPrivateKey({
+    key: privateKeyPem,
+    format: 'pem',
+    type: 'pkcs8',
+  });
+
+  // Експортуємо приватний ключ у DER SEC1 формат (чистий EC ключ)
+  // Саме цей формат очікує crypto.ECDH.setPrivateKey
+  const privateKeySec1Der = keyObject.export({
+    format: 'der',
+    type: 'sec1',
+  });
+
+  return privateKeySec1Der;
 }
 
 // HKDF на sha256
@@ -106,11 +117,10 @@ function hkdf(secret, salt, info, length) {
   return crypto.hkdfSync('sha256', secret, salt, info, length);
 }
 
-// Розшифрування Apple Pay токена
 function decryptApplePayToken(paymentData) {
-  const ephemeralPublicKeyBytes = Buffer.from(paymentData.header.ephemeralPublicKey, 'base64');
+  const privateKeyBuffer = getPrivateKeyBufferFromPkcs8Pem();
 
-  const privateKeyBuffer = getPrivateKeyBuffer();
+  const ephemeralPublicKeyBytes = Buffer.from(paymentData.header.ephemeralPublicKey, 'base64');
 
   const ecdh = crypto.createECDH('prime256v1');
   ecdh.setPrivateKey(privateKeyBuffer);
@@ -135,6 +145,7 @@ function decryptApplePayToken(paymentData) {
 
   return JSON.parse(decrypted.toString('utf8'));
 }
+
 
 app.post('/authorize', (req, res) => {
   try {
