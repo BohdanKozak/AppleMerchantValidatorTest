@@ -154,8 +154,10 @@ function decryptApplePayToken(paymentData) {
 }
 
 app.post('/authorize', (req, res) => {
+  const { token } = req.body;
+  console.log(token);
   try {
-    const { paymentData } = req.body;
+    const paymentData = token.paymentData;
     if (!paymentData) return res.status(400).json({ error: 'Missing paymentData' });
 
     const decrypted = decryptApplePayToken(paymentData);

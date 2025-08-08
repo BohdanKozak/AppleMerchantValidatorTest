@@ -79,7 +79,7 @@ var applePayService = {
           await fetch("https://applemerchantvalidatortest.onrender.com/authorize", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token: event.payment.token.paymentData }),
+            body: JSON.stringify({ token: event.payment.token }),
           });
 
           session.completePayment(ApplePaySession.STATUS_SUCCESS);
