@@ -95,13 +95,33 @@ writeProcessingCertFromEnv();
 
 function getPrivateKeyFromP12() {
   const p12Buffer = fs.readFileSync(P12_PATH2);
-  const keyObject = crypto.createPrivateKey({
-    key: p12Buffer,
-    format: 'p12',
-    passphrase: process.env.APPLE_PAYMENT_PROCESSING_CERT_PASSWORD
+  const p12Asn1 = forge.asn1.fromDer(p12Buffer.toString('binary'));
+  const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, false, process.env.APPLE_PAYMENT_PROCESSING_CERT_PASSWORD);
+
+  let privateKeyPem = null;
+
+  p12.safeContents.forEach(safeContent => {
+    safeContent.safeBags.forEach(safeBag => {
+      // Відфільтрувати ключі, які є приватними, і які є EC
+      if (
+        (safeBag.type === forge.pki.oids.pkcs8ShroudedKeyBag || safeBag.type === forge.pki.oids.keyBag) &&
+        safeBag.key
+      ) {
+        // Спробуємо конвертувати залежно від типу ключа
+        if (safeBag.key.privateKey) { // це EC ключ
+          privateKeyPem = forge.pki.privateKeyToPem(safeBag.key.privateKey);
+        } else {
+          privateKeyPem = forge.pki.privateKeyToPem(safeBag.key);
+        }
+      }
+    });
   });
 
-  return keyObject.export({ format: 'pem', type: 'pkcs8' });
+  if (!privateKeyPem) {
+    throw new Error('Private key not found in payment processing certificate');
+  }
+
+  return privateKeyPem;
 }
 
 
