@@ -86,22 +86,27 @@ function getPrivateKeyBufferFromPkcs8Pem() {
   const privateKeyPem = process.env.APPLE_PAYMENT_PROCESSING_KEY;
   if (!privateKeyPem) throw new Error('APPLE_PAYMENT_PROCESSING_KEY is not set');
 
-  // Розбираємо PKCS#8 PEM
-  const privateKeyObj = forge.pki.privateKeyFromPem(privateKeyPem);
+  // Парсимо PEM в ASN.1 об'єкт
+  const pemMessage = forge.pem.decode(privateKeyPem)[0];
+  const asn1 = forge.asn1.fromDer(forge.util.createBuffer(pemMessage.body));
 
-  // Витягуємо приватне число d (BigInteger)
-  const d = privateKeyObj.d;
+  // Парсимо як PKCS#8 (повинен бути PrivateKeyInfo)
+  const privateKeyInfo = forge.pki.privateKeyInfoFromAsn1(asn1);
 
-  // Конвертуємо d в hex і підганяємо довжину до 64 символів (32 байти)
+  // З PKCS#8 витягуємо EC приватний ключ
+  const ecPrivateKeyAsn1 = forge.asn1.fromDer(privateKeyInfo.privateKey);
+  const ecPrivateKey = forge.pki.ecPrivateKeyFromAsn1(ecPrivateKeyAsn1);
+
+  // Витягуємо d — приватний скаляр (BigInteger)
+  const d = ecPrivateKey.privateKey;
+
+  // Конвертуємо d у hex та підганяємо довжину до 64 (32 байти)
   let privHex = d.toString(16);
   if (privHex.length < 64) {
     privHex = privHex.padStart(64, '0');
   }
 
-  // Конвертуємо в Buffer
-  const privBuffer = Buffer.from(privHex, 'hex');
-
-  return privBuffer;
+  return Buffer.from(privHex, 'hex');
 }
 
 
