@@ -82,34 +82,46 @@ app.post('/validate-merchant', async (req, res) => {
 
 app.use(express.json());
 
-function getPrivateKeyBufferFromPkcs8Pem() {
+function getPrivateKeyBufferFromPkcs8Pem(pem) {
+  // Розбираємо PEM
+  const msg = forge.pem.decode(pem)[0];
+  if (!msg || !msg.body) {
+    throw new Error('Invalid PEM format');
+  }
+  // Конвертуємо DER з PEM тіла
+  const asn1 = forge.asn1.fromDer(forge.util.createBuffer(msg.body));
+
+  // Витягуємо OCTET STRING з PrivateKeyInfo (третій елемент послідовності)
+  const privateKeyOctetString = asn1.value[2];
+  if (!privateKeyOctetString || privateKeyOctetString.type !== forge.asn1.Type.OCTETSTRING) {
+    throw new Error('Invalid PKCS#8 format: missing privateKey octet string');
+  }
+
+  // Розбираємо ECPrivateKey, що всередині OCTET STRING
+  const ecPrivateKeyAsn1 = forge.asn1.fromDer(privateKeyOctetString.value);
+  if (!ecPrivateKeyAsn1 || !ecPrivateKeyAsn1.value || ecPrivateKeyAsn1.value.length < 2) {
+    throw new Error('Invalid EC Private Key ASN.1 structure');
+  }
+
+  // Приватний ключ — другий елемент ECPrivateKey SEQUENCE, тип OCTET STRING
+  const privateKeyOctets = ecPrivateKeyAsn1.value[1];
+  if (!privateKeyOctets || privateKeyOctets.type !== forge.asn1.Type.OCTETSTRING) {
+    throw new Error('Invalid EC Private Key format');
+  }
+
+  // Отримуємо байти приватного ключа
+  const privKeyBytes = privateKeyOctets.value;
+
+  // Повертаємо у Buffer (бінарні дані)
+  return Buffer.from(privKeyBytes, 'binary');
+}
+
+function getPrivateKeyBuffer() {
   const privateKeyPem = process.env.APPLE_PAYMENT_PROCESSING_KEY;
   if (!privateKeyPem) throw new Error('APPLE_PAYMENT_PROCESSING_KEY is not set');
 
-  // Парсимо PEM в ASN.1 об'єкт
-  const pemMessage = forge.pem.decode(privateKeyPem)[0];
-  const asn1 = forge.asn1.fromDer(forge.util.createBuffer(pemMessage.body));
-
-  // Парсимо як PKCS#8 (повинен бути PrivateKeyInfo)
-  const privateKeyInfo = forge.pki.privateKeyInfoFromAsn1(asn1);
-
-  // З PKCS#8 витягуємо EC приватний ключ
-  const ecPrivateKeyAsn1 = forge.asn1.fromDer(privateKeyInfo.privateKey);
-  const ecPrivateKey = forge.pki.ecPrivateKeyFromAsn1(ecPrivateKeyAsn1);
-
-  // Витягуємо d — приватний скаляр (BigInteger)
-  const d = ecPrivateKey.privateKey;
-
-  // Конвертуємо d у hex та підганяємо довжину до 64 (32 байти)
-  let privHex = d.toString(16);
-  if (privHex.length < 64) {
-    privHex = privHex.padStart(64, '0');
-  }
-
-  return Buffer.from(privHex, 'hex');
+  return getPrivateKeyBufferFromPkcs8Pem(privateKeyPem);
 }
-
-
 
 // HKDF на sha256
 function hkdf(secret, salt, info, length) {
@@ -117,7 +129,7 @@ function hkdf(secret, salt, info, length) {
 }
 
 function decryptApplePayToken(paymentData) {
-  const privateKeyBuffer = getPrivateKeyBufferFromPkcs8Pem();
+  const privateKeyBuffer = getPrivateKeyBuffer();
 
   const ephemeralPublicKeyBytes = Buffer.from(paymentData.header.ephemeralPublicKey, 'base64');
 
