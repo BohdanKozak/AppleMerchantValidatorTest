@@ -82,65 +82,30 @@ app.post('/validate-merchant', async (req, res) => {
 
 app.use(express.json());
 
-const P12_PATH2 = path.join(__dirname, 'payment_processing.p12');
+function getPrivateKeyFromEnv() {
+  const privateKeyPem = process.env.APPLE_PAYMENT_PROCESSING_KEY;
+  if (!privateKeyPem) throw new Error('APPLE_PAYMENT_PROCESSING_KEY is not set');
 
-function writeProcessingCertFromEnv() {
-  const base64 = process.env.APPLE_PAYMENT_PROCESSING_CERT_P12_BASE64;
-  if (!base64) throw new Error('APPLE_PAYMENT_PROCESSING_CERT_P12_BASE64 is not set');
-  fs.writeFileSync(P12_PATH2, Buffer.from(base64, 'base64'));
-  console.log('Payment processing .p12 certificate written to disk');
-}
-
-writeProcessingCertFromEnv();
-
-function getPrivateKeyFromP12() {
-  const p12Buffer = fs.readFileSync(P12_PATH2);
-  const p12Asn1 = forge.asn1.fromDer(p12Buffer.toString('binary'));
-  const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, false, process.env.APPLE_PAYMENT_PROCESSING_CERT_PASSWORD);
-
-  let privateKeyPem = null;
-
-  p12.safeContents.forEach(safeContent => {
-    safeContent.safeBags.forEach(safeBag => {
-      // Відфільтрувати ключі, які є приватними, і які є EC
-      if (
-        (safeBag.type === forge.pki.oids.pkcs8ShroudedKeyBag || safeBag.type === forge.pki.oids.keyBag) &&
-        safeBag.key
-      ) {
-        // Спробуємо конвертувати залежно від типу ключа
-        if (safeBag.key.privateKey) { // це EC ключ
-          privateKeyPem = forge.pki.privateKeyToPem(safeBag.key.privateKey);
-        } else {
-          privateKeyPem = forge.pki.privateKeyToPem(safeBag.key);
-        }
-      }
-    });
+  return crypto.createPrivateKey({
+    key: privateKeyPem,
+    format: 'pem',
+    type: 'pkcs8',
   });
-
-  if (!privateKeyPem) {
-    throw new Error('Private key not found in payment processing certificate');
-  }
-
-  return privateKeyPem;
 }
 
-
+// HKDF за допомогою sha256
 function hkdf(secret, salt, info, length) {
   return crypto.hkdfSync('sha256', secret, salt, info, length);
 }
 
+// Розшифрування Apple Pay токена
 function decryptApplePayToken(paymentData) {
-  const privateKeyPem = getPrivateKeyFromP12();
+  const keyObject = getPrivateKeyFromEnv();
 
   const ephemeralPublicKeyBytes = Buffer.from(paymentData.header.ephemeralPublicKey, 'base64');
 
   const ecdh = crypto.createECDH('prime256v1');
-  ecdh.setPrivateKey(
-    crypto.createPrivateKey({
-      key: privateKeyPem,
-      format: 'pem'
-    }).export({ format: 'der', type: 'pkcs8' }).slice(-32)
-  );
+  ecdh.setPrivateKey(keyObject.export({ format: 'der', type: 'pkcs8' }));
 
   const sharedSecret = ecdh.computeSecret(ephemeralPublicKeyBytes);
 
@@ -152,7 +117,7 @@ function decryptApplePayToken(paymentData) {
   );
 
   const dataBuffer = Buffer.from(paymentData.data, 'base64');
-  const iv = dataBuffer.slice(0, 16); // Apple Pay IV
+  const iv = dataBuffer.slice(0, 16);
   const cipherText = dataBuffer.slice(16, dataBuffer.length - 16);
   const authTag = dataBuffer.slice(dataBuffer.length - 16);
 
@@ -164,13 +129,13 @@ function decryptApplePayToken(paymentData) {
 }
 
 app.post('/authorize', (req, res) => {
-  const { token } = req.body;
-  console.log(token);
   try {
-    const paymentData = token.paymentData;
-    if (!paymentData) return res.status(400).json({ error: 'Missing paymentData' });
+    const { token } = req.body;
+    if (!token || !token.paymentData) {
+      return res.status(400).json({ error: 'Missing paymentData in token' });
+    }
 
-    const decrypted = decryptApplePayToken(paymentData);
+    const decrypted = decryptApplePayToken(token.paymentData);
     console.log('Decrypted Apple Pay data:', decrypted);
 
     res.json({ message: 'Token decrypted', decrypted });
