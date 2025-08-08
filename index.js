@@ -82,30 +82,37 @@ app.post('/validate-merchant', async (req, res) => {
 
 app.use(express.json());
 
-function getPrivateKeyFromEnv() {
+function getPrivateKeyBuffer() {
   const privateKeyPem = process.env.APPLE_PAYMENT_PROCESSING_KEY;
   if (!privateKeyPem) throw new Error('APPLE_PAYMENT_PROCESSING_KEY is not set');
 
-  return crypto.createPrivateKey({
+  const keyObject = crypto.createPrivateKey({
     key: privateKeyPem,
     format: 'pem',
-    type: 'pkcs8',
   });
+
+  // Експортуємо у DER SEC1 формат, який треба для ECDH
+  const derKey = keyObject.export({
+    format: 'der',
+    type: 'sec1',
+  });
+
+  return derKey;
 }
 
-// HKDF за допомогою sha256
+// HKDF на sha256
 function hkdf(secret, salt, info, length) {
   return crypto.hkdfSync('sha256', secret, salt, info, length);
 }
 
 // Розшифрування Apple Pay токена
 function decryptApplePayToken(paymentData) {
-  const keyObject = getPrivateKeyFromEnv();
+  const privateKeyDer = getPrivateKeyBuffer();
 
   const ephemeralPublicKeyBytes = Buffer.from(paymentData.header.ephemeralPublicKey, 'base64');
 
   const ecdh = crypto.createECDH('prime256v1');
-  ecdh.setPrivateKey(keyObject.export({ format: 'der', type: 'pkcs8' }));
+  ecdh.setPrivateKey(privateKeyDer);
 
   const sharedSecret = ecdh.computeSecret(ephemeralPublicKeyBytes);
 
