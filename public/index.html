@@ -30,7 +30,7 @@
   }
 
   async function onConfirmDeposit(paymentToken) {
-    return await fetch(
+    var response = await fetch(
       "https://applemerchantvalidatortest.onrender.com/authorize",
       {
         method: "POST",
@@ -38,6 +38,8 @@
         body: JSON.stringify({ token: JSON.stringify(paymentToken) }),
       }
     );
+
+    return response.ok ? true : false
   }
 
     applePayService.renderButton(
