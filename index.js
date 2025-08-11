@@ -50,6 +50,8 @@ app.post('/validate-merchant', async (req, res) => {
     return res.status(400).json({ error: 'Missing validationUrl' });
   }
 
+  console.log(validationUrl)
+
   try {
     const sessionResponse = await fetch(validationUrl, {
       method: 'POST',
