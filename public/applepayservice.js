@@ -70,7 +70,7 @@ var applePayService = {
         try {
           if (typeof f.onPrepareDeposit !== "function") {
             alert("onPrepareDeposit is not implemented");
-            return currentSession.abort();
+            return session.abort();
           }
 
           const response = await f.onPrepareDeposit();
@@ -89,7 +89,7 @@ var applePayService = {
       session.onpaymentauthorized = async (event) => {
         if (typeof f.onConfirmDeposit !== "function") {
           alert("onConfirmDeposit is not implemented");
-          return currentSession.completePayment(ApplePaySession.STATUS_FAILURE);
+          return session.completePayment(ApplePaySession.STATUS_FAILURE);
         }
 
         try {
@@ -100,7 +100,7 @@ var applePayService = {
           });
           const result = await f.onConfirmDeposit(JSON.stringify(event.payment.token));
 
-          currentSession.completePayment(
+          session.completePayment(
             result === true
               ? ApplePaySession.STATUS_SUCCESS
               : ApplePaySession.STATUS_FAILURE
