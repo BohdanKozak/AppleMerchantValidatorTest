@@ -93,6 +93,12 @@ app.post('/authorize', (req, res) => {
   return res.status(200).json({ message: 'Token received and logged' });
 });
 
+app.post('/onError', (req, res) => {
+  console.error('--- Error received ---');
+  console.dir(req.body, { depth: null });
+
+  return res.status(500).json({ error: 'Error received and logged' });
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

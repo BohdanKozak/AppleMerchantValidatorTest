@@ -5,11 +5,19 @@
   <title>Apple Pay Button</title>
 </head>
 <body>
-
 <div id="apple-pay-button"></div>
-
 <script src="applepayservice.js"></script>
 <script>
+  async function onError(errorMessage) {
+    return await fetch(
+      "https://applemerchantvalidatortest.onrender.com/onError",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ Message: errorMessage }),
+      }
+    );
+  }
   function onInitPayment() {
     return { 
       amount: "9.99", 
@@ -17,7 +25,6 @@
       currencyCode: "USD" 
     };
   }
-
   async function onPrepareDeposit() {
     return await fetch(
       "https://applemerchantvalidatortest.onrender.com/validate-merchant",
@@ -28,7 +35,6 @@
       }
     );
   }
-
   async function onConfirmDeposit(paymentToken) {
     var response = await fetch(
       "https://applemerchantvalidatortest.onrender.com/authorize",
@@ -38,20 +44,16 @@
         body: JSON.stringify({ token: JSON.stringify(paymentToken) }),
       }
     );
-
     return response.ok ? true : false
   }
-
     applePayService.renderButton(
       {
         onInitPayment,
+        onError,
         onPrepareDeposit,
         onConfirmDeposit
       },
       "apple-pay-button");
-
 </script>
-
-
 </body>
 </html>

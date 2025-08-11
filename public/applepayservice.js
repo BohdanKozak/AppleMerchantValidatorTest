@@ -1,5 +1,13 @@
 var applePayService = {
   renderButton: function(f, buttonPlaceholderId) {
+    function fireError(err) {
+      if (typeof f.onError === "function") {
+        f.onError(err);
+      } else {
+        console.error(err);
+      }
+    }
+
     function createApplePayButton() {
       const button = document.createElement("button");
       button.id = "applepay_button";
@@ -22,13 +30,13 @@ var applePayService = {
 
     const container = document.getElementById(buttonPlaceholderId);
     if (!container) {
-      alert(`Container with id "${buttonPlaceholderId}" not found`);
+      fireError(`Container with id "${buttonPlaceholderId}" not found`);
       return;
     }
 
     if (!window.ApplePaySession || !ApplePaySession.canMakePayments()) {
       container.style.display = "none";
-      alert("Apple Pay is not supported or not available.");
+      fireError("Apple Pay is not supported or not available.");
       return;
     }
 
@@ -38,10 +46,12 @@ var applePayService = {
     button.addEventListener("click", async () => {
       button.disabled = true;
       if (typeof f.onInitPayment !== "function") {
-        throw alert("initPayment is not implemented");
+        throw fireError("initPayment is not implemented");
       }
       
       const initResponse = await f.onInitPayment();
+
+      fireError("HELLO FROM APPLEPAY SERVICE")
 
       if (
         !initResponse ||
@@ -49,7 +59,7 @@ var applePayService = {
         !initResponse.amount ||
         !initResponse.currencyCode
       ) {
-        throw alert("'onInitPayment' parameters are invalid");
+        throw fireError("'onInitPayment' parameters are invalid");
       }
 
       const paymentRequest = {
@@ -69,7 +79,7 @@ var applePayService = {
       session.onvalidatemerchant = async (event) => {
         try {
           if (typeof f.onPrepareDeposit !== "function") {
-            alert("onPrepareDeposit is not implemented");
+            fireError("onPrepareDeposit is not implemented");
             return session.abort();
           }
 
@@ -81,14 +91,14 @@ var applePayService = {
 
           session.completeMerchantValidation(merchantSession);
         } catch (err) {
-          alert("Merchant validation failed: " + err.message);
+          fireError("Merchant validation failed: " + err.message);
           session.abort();
         }
       };
 
       session.onpaymentauthorized = async (event) => {
         if (typeof f.onConfirmDeposit !== "function") {
-          alert("onConfirmDeposit is not implemented");
+          fireError("onConfirmDeposit is not implemented");
           return session.completePayment(ApplePaySession.STATUS_FAILURE);
         }
 
@@ -106,7 +116,7 @@ var applePayService = {
               : ApplePaySession.STATUS_FAILURE
           );
         } catch (err) {
-          alert("Payment authorization failed: " + err.message);
+          fireError("Payment authorization failed: " + err.message);
           session.completePayment(ApplePaySession.STATUS_FAILURE);
         }
       };
