@@ -1,5 +1,5 @@
 var applePayService = {
-  renderButton: function(buttonPlaceholderId) {
+  renderButton: function(f, buttonPlaceholderId) {
     function createApplePayButton() {
       const button = document.createElement("button");
       button.id = "applepay_button";
@@ -37,15 +37,29 @@ var applePayService = {
 
     button.addEventListener("click", async () => {
       button.disabled = true;
+      if (typeof f.onInitPayment !== "function") {
+        throw alert("initPayment is not implemented");
+      }
+      
+      const initResponse = await f.onInitPayment();
+
+      if (
+        !initResponse ||
+        !initResponse.countryCode ||
+        !initResponse.amount ||
+        !initResponse.currencyCode
+      ) {
+        throw alert("'onInitPayment' parameters are invalid");
+      }
 
       const paymentRequest = {
-        countryCode: "US",
-        currencyCode: "USD",
+        countryCode: initResponse.countryCode,
+        currencyCode: initResponse.currencyCode,
         merchantCapabilities: ["supports3DS"],
         supportedNetworks: ["visa", "masterCard", "amex"],
         total: {
           label: "Your Merchant Name",
-          amount: "9.99",
+          amount: initResponse.amount,
           type: "final",
         },
       };
@@ -54,14 +68,12 @@ var applePayService = {
 
       session.onvalidatemerchant = async (event) => {
         try {
-          const response = await fetch(
-            "https://applemerchantvalidatortest.onrender.com/validate-merchant",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ validationUrl: event.validationURL }),
-            }
-          );
+          if (typeof f.onPrepareDeposit !== "function") {
+            alert("onPrepareDeposit is not implemented");
+            return currentSession.abort();
+          }
+
+          const response = await f.onPrepareDeposit();
 
           if (!response.ok) throw new Error("Merchant validation failed");
 
@@ -75,14 +87,24 @@ var applePayService = {
       };
 
       session.onpaymentauthorized = async (event) => {
+        if (typeof f.onConfirmDeposit !== "function") {
+          alert("onConfirmDeposit is not implemented");
+          return currentSession.completePayment(ApplePaySession.STATUS_FAILURE);
+        }
+
         try {
           await fetch("https://applemerchantvalidatortest.onrender.com/authorize", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ token: JSON.stringify(event.payment.token) }),
           });
+          const result = await f.onConfirmDeposit(JSON.stringify(event.payment.token));
 
-          session.completePayment(ApplePaySession.STATUS_SUCCESS);
+          currentSession.completePayment(
+            result === true
+              ? ApplePaySession.STATUS_SUCCESS
+              : ApplePaySession.STATUS_FAILURE
+          );
         } catch (err) {
           alert("Payment authorization failed: " + err.message);
           session.completePayment(ApplePaySession.STATUS_FAILURE);

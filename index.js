@@ -90,7 +90,7 @@ app.post('/authorize', (req, res) => {
   console.log('Received Apple Pay token:');
   console.dir(token, { depth: null });
 
-  return res.status(200).json({ message: 'Token received and logged' });
+  return true;
 });
 
 

@@ -10,7 +10,44 @@
 
 <script src="applepayservice.js"></script>
 <script>
-  applePayService.renderButton("apple-pay-button");
+  function onInitPayment() {
+    return { 
+      amount: "9.99", 
+      countryCode: "US", 
+      currencyCode: "USD" 
+    };
+  }
+
+  async function onPrepareDeposit() {
+    return await fetch(
+      "https://applemerchantvalidatortest.onrender.com/validate-merchant",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ validationUrl: "https://apple-pay-gateway.apple.com/paymentservices/startSession" }),
+      }
+    );
+  }
+
+  async function onConfirmDeposit(paymentToken) {
+    return await fetch(
+      "https://applemerchantvalidatortest.onrender.com/authorize",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: JSON.stringify(paymentToken) }),
+      }
+    );
+  }
+
+    applePayService.renderButton(
+      {
+        onInitPayment,
+        onPrepareDeposit,
+        onConfirmDeposit
+      },
+      "apple-pay-button");
+
 </script>
 
 
