@@ -8,6 +8,15 @@ var applePayService = {
       }
     }
 
+    function getApplePayVersion() {
+    if (!window.ApplePaySession) return 0;
+
+    for (let v = 16; v >= 1; v--) {
+        if (ApplePaySession.supportsVersion(v)) return v;
+    }
+      return 0;
+    }
+
     function createApplePayButton() {
       const button = document.createElement("button");
       button.id = "applepay_button";
@@ -74,7 +83,10 @@ var applePayService = {
         },
       };
 
-      const session = new ApplePaySession(4, paymentRequest);
+      let v = getApplePayVersion();
+      fireError(v)
+
+      const session = new ApplePaySession(getApplePayVersion(), paymentRequest);
 
       session.onvalidatemerchant = async (event) => {
         try {
