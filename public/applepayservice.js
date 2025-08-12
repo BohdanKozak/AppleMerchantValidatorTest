@@ -9,12 +9,12 @@ var applePayService = {
     }
 
     function getApplePayVersion() {
-    if (!window.ApplePaySession) return 0;
+      if (!window.ApplePaySession) return 0;
 
-    for (let v = 16; v >= 1; v--) {
-        if (ApplePaySession.supportsVersion(v)) return v;
-    }
-      return 0;
+      for (let v = 16; v >= 1; v--) {
+          if (ApplePaySession.supportsVersion(v)) return v;
+      }
+        return 0;
     }
 
     function createApplePayButton() {
@@ -83,12 +83,9 @@ var applePayService = {
         },
       };
 
-      let v = getApplePayVersion();
-      fireError(v)
-
       const session = new ApplePaySession(getApplePayVersion(), paymentRequest);
 
-      session.onvalidatemerchant = async (event) => {
+      session.onvalidatemerchant = async () => {
         try {
           if (typeof f.onPrepareDeposit !== "function") {
             fireError("onPrepareDeposit is not implemented");
@@ -115,11 +112,6 @@ var applePayService = {
         }
 
         try {
-          await fetch("https://applemerchantvalidatortest.onrender.com/authorize", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token: JSON.stringify(event.payment.token) }),
-          });
           const result = await f.onConfirmDeposit(JSON.stringify(event.payment.token));
 
           session.completePayment(
