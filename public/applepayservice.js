@@ -112,7 +112,7 @@ var applePayService = {
         }
 
         try {
-          const result = await f.onConfirmDeposit(JSON.stringify(event.payment.token));
+          const result = await f.onConfirmDeposit(btoa(JSON.stringify(event.payment.token)));
 
           session.completePayment(
             result === true
