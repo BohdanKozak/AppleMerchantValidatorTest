@@ -20,15 +20,17 @@ var applePayService = {
     function createApplePayButton() {
       const button = document.createElement("button");
       button.id = "applepay_button";
-      button.setAttribute("type", "pay");
+      button.setAttribute("type", "button");
       button.setAttribute("lang", "en");
       button.setAttribute("role", "button");
 
+      button.style.width = "220px";
+      button.style.height = "44px";
+      button.style.cursor = "pointer";
+      button.style.WebkitAppearance = "-apple-pay-button";
       button.style.setProperty("-apple-pay-button-style", "black");
-      button.style.setProperty("-apple-pay-button-type", "plain");
-      button.style.width = "200px";
-    button.style.height = "44px";
-    
+      button.style.setProperty("-apple-pay-button-type", "buy");
+
       return button;
     }
 
@@ -80,7 +82,7 @@ var applePayService = {
 
       const session = new ApplePaySession(getApplePayVersion(), paymentRequest);
 
-      session.onvalidatemerchant = async () => {
+      session.onvalidatemerchant = async (event) => {
         try {
           if (typeof f.onPrepareDeposit !== "function") {
             fireError("onPrepareDeposit is not implemented");
