@@ -26,7 +26,7 @@ var applePayService = {
 
       button.style.WebkitAppearance = "-apple-pay-button";
       button.style.setProperty("-apple-pay-button-style", "black");
-      button.style.setProperty("-apple-pay-button-type", "buy");
+      button.style.setProperty("-apple-pay-button-type", "plain");
 
       return button;
     }
