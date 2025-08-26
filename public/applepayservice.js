@@ -24,9 +24,6 @@ var applePayService = {
       button.setAttribute("lang", "en");
       button.setAttribute("role", "button");
 
-      button.style.width = "220px";
-      button.style.height = "44px";
-      button.style.cursor = "pointer";
       button.style.WebkitAppearance = "-apple-pay-button";
       button.style.setProperty("-apple-pay-button-style", "black");
       button.style.setProperty("-apple-pay-button-type", "buy");
