@@ -21,8 +21,11 @@ var applePayService = {
       const button = document.createElement("button");
       button.id = "applepay_button";
       button.setAttribute("buttonstyle", "black");
-      button.setAttribute("type", "pay");
+      button.setAttribute("type", "buy");
       button.setAttribute("locale", "en");
+
+     button.style.width = "200px";
+     button.style.height = "44px";
 
       return button;
     }
