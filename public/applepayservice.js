@@ -20,13 +20,12 @@ var applePayService = {
     function createApplePayButton() {
       const button = document.createElement("button");
       button.id = "applepay_button";
-      button.setAttribute("type", "button");
-      button.setAttribute("lang", "en");
-      button.setAttribute("role", "button");
+      button.setAttribute("locale", "fr-FR");
+
 
       button.style.WebkitAppearance = "-apple-pay-button";
       button.style.setProperty("-apple-pay-button-style", "black");
-      button.style.setProperty("-apple-pay-button-type", "plain");
+      button.style.setProperty("-apple-pay-button-type", "pay");
 
       return button;
     }
