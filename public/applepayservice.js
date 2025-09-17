@@ -118,6 +118,11 @@ var applePayService = {
         }
       };
 
+      session.oncancel = () => {
+          fireError("User cancelled Apple Pay session");
+          currentSession.abort();
+      };
+
       session.begin();
     });
   },
