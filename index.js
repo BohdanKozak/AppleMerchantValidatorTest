@@ -59,7 +59,7 @@ app.post('/validate-merchant', async (req, res) => {
         merchantIdentifier: 'merchant.com.applemerchantvalidatortest',
         displayName: 'My Test Store',
         initiative: 'web',
-        initiativeContext: 'applemerchantvalidatortest.onrender.com',
+        initiativeContext: 'applebuttontest.onrender.com',
       }),
       agent: new https.Agent({
         pfx: fs.readFileSync(P12_PATH),
