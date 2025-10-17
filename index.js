@@ -63,7 +63,7 @@ app.post('/validate-merchant', async (req, res) => {
       }),
       agent: new https.Agent({
         pfx: fs.readFileSync(P12_PATH),
-        passphrase: '1234', 
+        passphrase: '12345', 
       }),
       headers: {
         'Content-Type': 'application/json',
