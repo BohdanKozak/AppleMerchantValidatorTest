@@ -133,17 +133,6 @@ var applePayService = {
         });
       };
 
-    if (!window.ApplePaySession) {
-      const checkInterval = setInterval(() => {
-            if (window.ApplePaySession) {
-                clearInterval(checkInterval);
-                mountButton();
-            }
-        }, 100);
-
-        setTimeout(() => clearInterval(checkInterval), 10000);
-    } else {
-      start();
-    }
+    start();
   },
 };
