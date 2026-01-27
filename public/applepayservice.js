@@ -37,9 +37,6 @@ var applePayService = {
     }
 
     if (!window.ApplePaySession || !ApplePaySession.canMakePayments()) {
-      container.style.display = "none";
-      fireError("Apple Pay is not supported or not available.");
-      return;
     }
 
     const button = createApplePayButton();
@@ -76,7 +73,7 @@ var applePayService = {
         },
       };
 
-      const session = new ApplePaySession(getApplePayVersion(), paymentRequest);
+      const session = new ApplePaySession(14, paymentRequest);
 
       session.onvalidatemerchant = async (event) => {
         try {
