@@ -27,6 +27,17 @@ var applePayService = {
       button.style.setProperty("-apple-pay-button-style", "white");
       button.style.setProperty("-apple-pay-button-type", "pay");
 
+        // Налаштування через атрибути, а не стилі
+        button.setAttribute("type", "pay");
+        button.setAttribute("buttonstyle", "black");
+        button.setAttribute("locale", "uk-UA");
+
+        // Розміри все одно через CSS
+        button.style.width = "100%";
+        button.style.height = "45px";
+        button.style.display = "block";
+        button.style.cursor = "pointer";
+
       return button;
     }
 
@@ -36,91 +47,97 @@ var applePayService = {
       return;
     }
 
-    if (!window.ApplePaySession || !ApplePaySession.canMakePayments()) {
-    }
+    const start = () => {
+        if (!ApplePaySession || !ApplePaySession.canMakePayments()) return;
+        const button = createApplePayButton();
+        container.appendChild(button);
+        
+        button.addEventListener("click", async () => {
+          button.disabled = true;
+          if (typeof f.onInitPayment !== "function") {
+            throw fireError("initPayment is not implemented");
+          }
+          
+          const initResponse = await f.onInitPayment();
 
-    const button = createApplePayButton();
-    container.appendChild(button);
+          fireError("HELLO FROM APPLEPAY SERVICE")
 
-    button.addEventListener("click", async () => {
-      button.disabled = true;
-      if (typeof f.onInitPayment !== "function") {
-        throw fireError("initPayment is not implemented");
-      }
-      
-      const initResponse = await f.onInitPayment();
-
-      fireError("HELLO FROM APPLEPAY SERVICE")
-
-      if (
-        !initResponse ||
-        !initResponse.countryCode ||
-        !initResponse.amount ||
-        !initResponse.currencyCode
-      ) {
-        throw fireError("'onInitPayment' parameters are invalid");
-      }
-
-      const paymentRequest = {
-        countryCode: initResponse.countryCode,
-        currencyCode: initResponse.currencyCode,
-        merchantCapabilities: ["supports3DS"],
-        supportedNetworks: ["visa", "masterCard", "amex"],
-        total: {
-          label: "Your Merchant Name",
-          amount: initResponse.amount,
-          type: "final",
-        },
-      };
-
-      const session = new ApplePaySession(14, paymentRequest);
-
-      session.onvalidatemerchant = async (event) => {
-        try {
-          if (typeof f.onPrepareDeposit !== "function") {
-            fireError("onPrepareDeposit is not implemented");
-            return session.abort();
+          if (
+            !initResponse ||
+            !initResponse.countryCode ||
+            !initResponse.amount ||
+            !initResponse.currencyCode
+          ) {
+            throw fireError("'onInitPayment' parameters are invalid");
           }
 
-          const response = await f.onPrepareDeposit();
+          const paymentRequest = {
+            countryCode: initResponse.countryCode,
+            currencyCode: initResponse.currencyCode,
+            merchantCapabilities: ["supports3DS"],
+            supportedNetworks: ["visa", "masterCard", "amex"],
+            total: {
+              label: "Your Merchant Name",
+              amount: initResponse.amount,
+              type: "final",
+            },
+          };
 
-          if (!response.ok) throw new Error("Merchant validation failed");
+          const session = new ApplePaySession(14, paymentRequest);
 
-          const merchantSession = await response.json();
+          session.onvalidatemerchant = async (event) => {
+            try {
+              if (typeof f.onPrepareDeposit !== "function") {
+                fireError("onPrepareDeposit is not implemented");
+                return session.abort();
+              }
 
-          session.completeMerchantValidation(merchantSession);
-        } catch (err) {
-          fireError("Merchant validation failed: " + err.message);
-          session.abort();
-        }
+              const response = await f.onPrepareDeposit();
+
+              if (!response.ok) throw new Error("Merchant validation failed");
+
+              const merchantSession = await response.json();
+
+              session.completeMerchantValidation(merchantSession);
+            } catch (err) {
+              fireError("Merchant validation failed: " + err.message);
+              session.abort();
+            }
+          };
+
+          session.onpaymentauthorized = async (event) => {
+            if (typeof f.onConfirmDeposit !== "function") {
+              fireError("onConfirmDeposit is not implemented");
+              return session.completePayment(ApplePaySession.STATUS_FAILURE);
+            }
+
+            try {
+              const result = await f.onConfirmDeposit(btoa(JSON.stringify(event.payment.token)));
+
+              session.completePayment(
+                result === true
+                  ? ApplePaySession.STATUS_SUCCESS
+                  : ApplePaySession.STATUS_FAILURE
+              );
+            } catch (err) {
+              fireError("Payment authorization failed: " + err.message);
+              session.completePayment(ApplePaySession.STATUS_FAILURE);
+            }
+          };
+
+          session.oncancel = () => {
+              fireError("User cancelled Apple Pay session");
+              currentSession.abort();
+          };
+
+          session.begin();
+        });
       };
 
-      session.onpaymentauthorized = async (event) => {
-        if (typeof f.onConfirmDeposit !== "function") {
-          fireError("onConfirmDeposit is not implemented");
-          return session.completePayment(ApplePaySession.STATUS_FAILURE);
-        }
-
-        try {
-          const result = await f.onConfirmDeposit(btoa(JSON.stringify(event.payment.token)));
-
-          session.completePayment(
-            result === true
-              ? ApplePaySession.STATUS_SUCCESS
-              : ApplePaySession.STATUS_FAILURE
-          );
-        } catch (err) {
-          fireError("Payment authorization failed: " + err.message);
-          session.completePayment(ApplePaySession.STATUS_FAILURE);
-        }
-      };
-
-      session.oncancel = () => {
-          fireError("User cancelled Apple Pay session");
-          currentSession.abort();
-      };
-
-      session.begin();
-    });
+    if (!window.ApplePaySession) {
+      window.addEventListener('ApplePayJSLoaded', start);
+    } else {
+      start();
+    }
   },
 };
