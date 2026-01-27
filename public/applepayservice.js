@@ -48,7 +48,6 @@ var applePayService = {
     }
 
     const start = () => {
-        if (!ApplePaySession || !ApplePaySession.canMakePayments()) return;
         const button = createApplePayButton();
         container.appendChild(button);
         
@@ -135,7 +134,14 @@ var applePayService = {
       };
 
     if (!window.ApplePaySession) {
-      window.addEventListener('ApplePayJSLoaded', start);
+      const checkInterval = setInterval(() => {
+            if (window.ApplePaySession) {
+                clearInterval(checkInterval);
+                mountButton();
+            }
+        }, 100);
+
+        setTimeout(() => clearInterval(checkInterval), 10000);
     } else {
       start();
     }
