@@ -18,25 +18,17 @@ var applePayService = {
     }
 
     function createApplePayButton() {
-      const button = document.createElement("button");
+      const button = document.createElement("apple-pay-button");
       button.id = "applepay_button";
-      button.setAttribute("locale", "fr-FR");
 
+      button.setAttribute("buttonstyle", "black");
+      button.setAttribute("type", "pay");
+      button.setAttribute("locale", "uk-UA");
 
-      button.style.WebkitAppearance = "-apple-pay-button";
-      button.style.setProperty("-apple-pay-button-style", "white");
-      button.style.setProperty("-apple-pay-button-type", "pay");
-
-        // Налаштування через атрибути, а не стилі
-        button.setAttribute("type", "pay");
-        button.setAttribute("buttonstyle", "black");
-        button.setAttribute("locale", "uk-UA");
-
-        // Розміри все одно через CSS
-        button.style.width = "100%";
-        button.style.height = "45px";
-        button.style.display = "block";
-        button.style.cursor = "pointer";
+      button.style.width = "100%";
+      button.style.height = "45px";
+      button.style.display = "block";
+      button.style.cursor = "pointer";
 
       return button;
     }
