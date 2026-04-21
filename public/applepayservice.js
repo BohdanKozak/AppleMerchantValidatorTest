@@ -1,4 +1,17 @@
 var applePayService = {
+
+  loadScript: function (url, onload) {
+    var s = document.createElement("script");
+    s.src = url;
+    s.type = "text/javascript";
+    s.async = true;
+    s.crossOrigin = "anonymous";
+    if (onload != null) {
+      s.onload = onload;
+    }
+    document.head.appendChild(s);
+  },
+  
   renderButton: function(f, buttonPlaceholderId) {
     function fireError(err) {
       if (typeof f.onError === "function") {
@@ -126,6 +139,15 @@ var applePayService = {
         });
       };
 
-    start();
+    if (window.ApplePaySession) {
+      start();
+    } else {
+      this.loadScript(
+        "https://applepay.cdn-apple.com/jsapi/1.latest/apple-pay-sdk.js",
+        () => {
+          start();
+        }
+      );
+    }
   },
 };
