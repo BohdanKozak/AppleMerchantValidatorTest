@@ -34,6 +34,10 @@ var applePayService = {
       const button = document.createElement("apple-pay-button");
       button.id = "applepay_button";
 
+      button.style.WebkitAppearance = "-apple-pay-button";
+      button.style.setProperty("-apple-pay-button-style", "white");
+      button.style.setProperty("-apple-pay-button-type", "pay");
+
       button.setAttribute("buttonstyle", "black");
       button.setAttribute("type", "pay");
       button.setAttribute("locale", "uk-UA");
